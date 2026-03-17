@@ -2,11 +2,31 @@
 
 import json
 import os
+import re
 import time
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
 from src.juejin import Article
+
+
+def _md(content: str) -> dict:
+    """快捷构造 markdown 元素"""
+    return {"tag": "markdown", "content": content}
+
+
+def _hr() -> dict:
+    return {"tag": "hr"}
+
+
+def _linkify_refs(text: str, articles: list[Article]) -> str:
+    """将文本中的 [序号] 替换为飞书可点击链接 [[序号]](url)"""
+    def _replace(m: re.Match) -> str:
+        idx = int(m.group(1))
+        if 0 <= idx < len(articles):
+            return f"[[{idx}]]({articles[idx].url})"
+        return m.group(0)
+    return re.sub(r"\[(\d+)\]", _replace, text)
 
 
 def _build_card(
@@ -20,62 +40,51 @@ def _build_card(
     elements: list[dict] = []
 
     if summary:
-        # 一句话总览
-        elements.append({
-            "tag": "markdown",
-            "content": f"**{summary['one_liner']}**",
-        })
-        elements.append({"tag": "hr"})
+        # 日期 + 一句话总览
+        elements.append(_md(f"**日期：{date_str}**"))
+        elements.append(_md(f"**一句话总览**\n{summary.get('one_liner', '')}"))
+        elements.append(_hr())
 
-        # 今日最热
-        top = summary.get("top_pick", {})
-        top_idx = top.get("index", 0)
-        if 0 <= top_idx < len(articles):
-            a = articles[top_idx]
-            elements.append({
-                "tag": "markdown",
-                "content": (
-                    f"🔥 **今日最热**\n"
-                    f"[{a.title}]({a.url})\n"
-                    f"👤 {a.author} · 👍{a.digg_count} · 👀{a.view_count}\n"
-                    f"_{top.get('reason', '')}_"
-                ),
-            })
-            elements.append({"tag": "hr"})
+        # 今日推荐阅读
+        recommendations = summary.get("recommendations", [])
+        if recommendations:
+            elements.append(_md("**今日推荐阅读**"))
+            for rec in recommendations:
+                lines = [f"**{rec['direction']}**"]
+                for idx in rec.get("article_indices", []):
+                    if 0 <= idx < len(articles):
+                        a = articles[idx]
+                        lines.append(f"• [{a.title}]({a.url})")
+                elements.append(_md("\n".join(lines)))
+            elements.append(_hr())
 
-        # 分类板块
-        for cat in summary.get("categories", []):
-            lines = [f"**{cat['name']}** — {cat['summary']}"]
-            for idx in cat.get("article_indices", []):
-                if 0 <= idx < len(articles):
-                    a = articles[idx]
-                    lines.append(
-                        f"• [{a.title}]({a.url})  "
-                        f"👤{a.author} 👍{a.digg_count} 👀{a.view_count}"
-                    )
-            elements.append({"tag": "markdown", "content": "\n".join(lines)})
+        # 简短结论
+        conclusion = summary.get("conclusion", "")
+        if conclusion:
+            elements.append(_md(f"**简短结论**\n{conclusion}"))
+
     else:
-        # 降级：无 AI 总结，直接列出文章
+        # 降级：无 AI 总结，按顺序列出
+        elements.append(_md(f"**日期：{date_str}**\n今日共 {len(articles)} 篇文章上榜"))
+        elements.append(_hr())
         for i, a in enumerate(articles):
-            elements.append({
-                "tag": "markdown",
-                "content": (
-                    f"**{i + 1}.** [{a.title}]({a.url})\n"
-                    f"👤 {a.author} · 👍{a.digg_count} · 👀{a.view_count}"
-                ),
-            })
+            elements.append(_md(
+                f"**第{i + 1}名 | [{a.title}]({a.url})**\n"
+                f"👍 {a.digg_count}赞 · 👀 {a.view_count}阅读 · 💬 {a.comment_count}评论\n"
+                f"{a.brief}"
+            ))
+            elements.append(_hr())
 
-    elements.append({"tag": "hr"})
-    elements.append({
-        "tag": "markdown",
-        "content": f"📊 共 {len(articles)} 篇 · 数据来源 [掘金](https://juejin.cn) · 自动推送",
-    })
+    # 底部
+    elements.append(_md(
+        f"📊 共 {len(articles)} 篇 · 数据来源 [掘金](https://juejin.cn) · 自动推送"
+    ))
 
     return {
         "msg_type": "interactive",
         "card": {
             "header": {
-                "title": {"tag": "plain_text", "content": f"📰 掘金热榜简报 | {date_str}"},
+                "title": {"tag": "plain_text", "content": "📰 今日掘金热榜简报"},
                 "template": "blue",
             },
             "elements": elements,

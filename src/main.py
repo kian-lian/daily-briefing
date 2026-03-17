@@ -1,5 +1,8 @@
 """入口：串联抓取 → 总结 → 推送"""
 
+from dotenv import load_dotenv
+load_dotenv()  # 加载 .env 文件到环境变量
+
 from src.juejin import fetch_hot_list
 from src.summarizer import summarize_with_fallback
 from src.feishu import push_to_feishu
@@ -19,8 +22,23 @@ def main():
     print("2/3 AI 分类总结...")
     summary = summarize_with_fallback(articles)
     if summary:
-        cats = summary.get("categories", [])
-        print(f"    分为 {len(cats)} 个类别")
+        print(f"\n    📌 一句话总览: {summary.get('one_liner', '')}")
+
+        recs = summary.get("recommendations", [])
+        if recs:
+            print("\n    📖 今日推荐阅读:")
+            for rec in recs:
+                print(f"\n    {rec['direction']}")
+                for idx in rec.get("article_indices", []):
+                    if 0 <= idx < len(articles):
+                        a = articles[idx]
+                        print(f"       • {a.title}")
+                        print(f"         {a.url}")
+
+        conclusion = summary.get("conclusion", "")
+        if conclusion:
+            print(f"\n    💡 简短结论: {conclusion}")
+        print()
     else:
         print("    跳过 AI 总结，使用原始列表")
 

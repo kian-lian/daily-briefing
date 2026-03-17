@@ -8,30 +8,31 @@ from openai import OpenAI
 
 from src.juejin import Article
 
-SYSTEM_PROMPT = """你是一位技术媒体编辑，负责将掘金热榜文章分类整理成简报。
+SYSTEM_PROMPT = """你是一位资深技术媒体编辑，负责将掘金热榜文章整理成一份高质量的每日简报。
+
+你需要输出以下 3 个部分：
+
+1. **one_liner**: 一句话总览（30-60字），概括今天热榜集中在哪几类话题。
+2. **recommendations**: 今日推荐阅读，按方向分组（如 AI 方向、前端方向、移动端方向、后端方向等），每个方向选 2-4 篇最值得读的文章。
+3. **conclusion**: 简短结论（2-3 句话），总结今日热榜反映的技术趋势。
 
 要求：
-1. 将文章分为 4-6 个主题类别（如：AI 与大模型、前端工程、后端与架构、移动开发、开发工具、行业热点等）
-2. 每个类别给出一句话趋势总结（15-30字）
-3. 从所有文章中选出 1 篇"今日最热"，写一句推荐语（20-40字）
-4. 写一句今日热榜总览（20-40字）
-5. 每篇文章只能属于一个类别
-6. 类别按文章数量从多到少排序
+- 每篇文章通过其在输入列表中的序号（从 0 开始）引用
+- recommendations 中用 article_indices 数组引用文章
+- 语气简洁专业，不要浮夸
+- 描述要有洞察，不要只是复述标题
 
 严格按以下 JSON 格式输出，不要输出其他内容：
 {
-  "top_pick": {"index": 0, "reason": "推荐理由"},
-  "categories": [
+  "one_liner": "今天热榜主要集中在...",
+  "recommendations": [
     {
-      "name": "类别名",
-      "summary": "趋势总结",
-      "article_indices": [0, 3, 7]
+      "direction": "AI 方向",
+      "article_indices": [1, 3, 7]
     }
   ],
-  "one_liner": "今日热榜一句话总览"
-}
-
-其中 index / article_indices 是文章在输入列表中的序号（从 0 开始）。"""
+  "conclusion": "今天的热榜说明..."
+}"""
 
 
 def summarize(articles: list[Article]) -> dict:
@@ -61,10 +62,14 @@ def summarize(articles: list[Article]) -> dict:
             {"role": "user", "content": user_content},
         ],
         temperature=0.3,
-        response_format={"type": "json_object"},
     )
 
-    return json.loads(response.choices[0].message.content)
+    # 兼容不同 API 返回格式
+    content = response.choices[0].message.content
+    # 提取 JSON（有些模型会在 JSON 外包裹 markdown 代码块）
+    if "```" in content:
+        content = content.split("```json")[-1].split("```")[0] if "```json" in content else content.split("```")[1].split("```")[0]
+    return json.loads(content.strip())
 
 
 def summarize_with_fallback(articles: list[Article]) -> dict | None:
