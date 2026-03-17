@@ -16,5 +16,6 @@ python -m src.main
 
 ## 自动推送
 
-GitHub Actions 每天 UTC 04:00（北京 12:00）自动执行。
+GitHub Actions 每天 UTC 09:17（北京时间 17:17）自动执行。
+GitHub 官方说明 `schedule` 事件在高负载时可能延迟，甚至偶发丢弃，因此这里刻意避开常见分钟位以降低漏触发概率。
 也可在 Actions 页面手动触发。

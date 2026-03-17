@@ -2,8 +2,9 @@ name: 掘金热榜简报
 
 on:
   schedule:
-    # UTC 08:30 = 北京时间 16:30
-    - cron: '30 8 * * *'
+    # GitHub 官方说明 schedule 在高负载时可能延迟或丢弃，避开常见分钟位以降低 missed run 概率。
+    # UTC 09:17 = 北京时间 17:17
+    - cron: '17 9 * * *'
   workflow_dispatch:
 
 jobs:
