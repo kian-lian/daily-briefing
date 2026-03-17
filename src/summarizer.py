@@ -49,9 +49,13 @@ def summarize(articles: list[Article]) -> dict:
         + "\n\n".join(lines)
     )
 
-    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    client = OpenAI(
+        api_key=os.environ["OPENAI_API_KEY"],
+        base_url=os.environ.get("OPENAI_BASE_URL"),  # 可选，兼容第三方 API
+    )
+    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_content},
