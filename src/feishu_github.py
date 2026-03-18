@@ -17,6 +17,17 @@ def _hr() -> dict:
     return {"tag": "hr"}
 
 
+def _fmt_num(n: str) -> str:
+    """格式化数字：>=1000 显示为 1.2k 形式"""
+    try:
+        v = int(n)
+    except (ValueError, TypeError):
+        return n
+    if v >= 1000:
+        return f"{v / 1000:.1f}k".replace(".0k", "k")
+    return str(v)
+
+
 def _build_card(
     repos: list[TrendingRepo],
     summary: dict | None,
@@ -33,6 +44,8 @@ def _build_card(
         elements.append(_hr())
 
         recommendations = summary.get("recommendations", [])
+        descriptions = summary.get("descriptions", {})
+
         if recommendations:
             elements.append(_md("**今日推荐关注**"))
             for rec in recommendations:
@@ -41,10 +54,13 @@ def _build_card(
                     if 0 <= idx < len(repos):
                         r = repos[idx]
                         lang_tag = f"`{r.language}`" if r.language != "Unknown" else ""
+                        desc = descriptions.get(str(idx), r.description)
                         lines.append(
                             f"• [{r.name}]({r.url}) {lang_tag} "
-                            f"⭐{r.stars} (+{r.stars_today})"
+                            f"⭐{_fmt_num(r.stars)} (+{_fmt_num(r.stars_today)})"
                         )
+                        if desc:
+                            lines.append(f"  {desc}")
                 elements.append(_md("\n".join(lines)))
             elements.append(_hr())
 
@@ -60,7 +76,7 @@ def _build_card(
             lang_tag = f"`{r.language}`" if r.language != "Unknown" else ""
             elements.append(_md(
                 f"**#{i + 1} [{r.name}]({r.url})** {lang_tag}\n"
-                f"⭐ {r.stars} (+{r.stars_today} today) · 🍴 {r.forks}\n"
+                f"⭐ {_fmt_num(r.stars)} (+{_fmt_num(r.stars_today)} today) · 🍴 {_fmt_num(r.forks)}\n"
                 f"{r.description}"
             ))
             if i < len(repos) - 1:
