@@ -1,10 +1,7 @@
 name: 掘金热榜简报
 
 on:
-  schedule:
-    # GitHub 官方说明 schedule 在高负载时可能延迟或丢弃，避开常见分钟位以降低 missed run 概率。
-    # UTC 09:17 = 北京时间 17:17
-    - cron: '17 9 * * *'
+  # 定时触发由 cron-job.org 通过 workflow_dispatch 调用，北京时间每天 10:30
   workflow_dispatch:
 
 jobs:
