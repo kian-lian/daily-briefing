@@ -6,6 +6,8 @@ on:
 
 jobs:
   juejin-briefing:
+    # 临时暂停该流水线；恢复时删除这一行即可
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +28,8 @@ jobs:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
   github-trending:
+    # 临时暂停该流水线；恢复时删除这一行即可
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
